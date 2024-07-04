@@ -38,7 +38,8 @@ Novel tasks:
 2. Check if there's a work already done? Not yet, however there are work including complicated scene perception module
 3. Maybe having a memory of how task was solved in previous episodes?
 
-3. Long horizon manipulation with coordinated embodied agents 
+3. Coordinated embodied manipulation for complex tasks 
+eg:
     - surgical robots operting with different tools
     - sorting a small table top area (active perception)
     - cordinated actions for high level tasks
@@ -49,6 +50,7 @@ To Do:
 - Add Number of robots feature
 
 
+Inputs on CV/SCene representation:
 rgb image from a robot to BEV RGB image(as an image that can be fed to vlm and fine tune on lora):
 https://arxiv.org/abs/2008.05711 
 https://openaccess.thecvf.com/content/CVPR2023/html/Gosala_SkyEye_Self-Supervised_Birds-Eye-View_Semantic_Mapping_Using_Monocular_Frontal_View_Images_CVPR_2023_paper.html
@@ -59,3 +61,6 @@ scene graphs:
 
 1. ManipulaTHOR implementation: understand fully
 2. Read two other papers
+
+#####################################################################################################################
+
