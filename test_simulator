@@ -1,6 +1,0 @@
-source ~/anaconda3/bin/activate
-conda init
-
-
-
-habitat-viewer ./hab-3d-scenes/scene_datasets/habitat-test-scenes/skokloster-castle.glb
