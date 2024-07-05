@@ -1,3 +1,4 @@
+SMART LLM CODE:
 data -> final_test.json files: 
     - Has test cases
     - Prompt + Robots available + Ground truth state of the environment
@@ -26,41 +27,43 @@ Prompt IMPROVEMENTS and summary:
 
 #####################################################################################################################3
 
-Chages list from baseline1:
-1. number of llms
-2. actions parallelization
-
-More baselines from AI2THOR publications:
-1. <read more papers>
-
-Novel tasks:
-1. Use floor plan/ Bird eye view with VLM for multi-agent action allocation: VIsual room arrangement paper
-2. Check if there's a work already done? Not yet, however there are work including complicated scene perception module
-3. Maybe having a memory of how task was solved in previous episodes?
-
-3. Coordinated embodied manipulation for complex tasks 
-eg:
-    - surgical robots operting with different tools
-    - sorting a small table top area (active perception)
-    - cordinated actions for high level tasks
+CHANGES TO SMART LLM CODE:
+1. Reduced number of llms
+2. Removed heterogeneous skilled robots: Use case very far from real world robots
+3. Added Action parallelization feature
+4. Suggests number of robots for efficient implementation of any task
 
 To Do:
-- Replace objects with env scene and see the results
 - categorize tasks based on parallelization: Understand all scenes in simulator
 - Add Number of robots feature
 
+Novel ideas:
+1. Use floor plan/ Bird eye view with VLM for multi-agent action allocation: Visual room arrangement paper
+3. Maybe having a memory of how task was solved in previous episodes?
 
-Inputs on CV/SCene representation:
-rgb image from a robot to BEV RGB image(as an image that can be fed to vlm and fine tune on lora):
-https://arxiv.org/abs/2008.05711 
-https://openaccess.thecvf.com/content/CVPR2023/html/Gosala_SkyEye_Self-Supervised_Birds-Eye-View_Semantic_Mapping_Using_Monocular_Frontal_View_Images_CVPR_2023_paper.html
-voxel/pointcloud representation: small area
-scene graphs:
+Inputs on CV/Scene Representation:
+- RGB image from a robot to BEV (as an image that can be fed to vlm and fine tune on lora):
+- Papers: 
+    - https://arxiv.org/abs/2008.05711 
+    - https://openaccess.thecvf.com/content/CVPR2023/html/Gosala_SkyEye_Self-Supervised_Birds-Eye-View_Semantic_Mapping_Using_Monocular_Frontal_View_Images_CVPR_2023_paper.html
+- voxel/pointcloud representation: used for small area
+- scene graphs: has scene full rep in graph format
 
 #####################################################################################################################
+"Coordinated embodied manipulation for complex tasks"
 
-1. ManipulaTHOR implementation: understand fully
-2. Read two other papers
+Motivation
+    - surgical robots operting with different tools
+    - sorting a small table top area (active perception)
+    - cordinated actions for high level tasks
+Tasks:
+    - Read ManipulaTHOR paper
+    - Survey paper: https://ieeexplore.ieee.org/abstract/document/8868987  
 
-#####################################################################################################################
+Novel Ideas:
+    - Change urdf file properties of interactable objects to move on floor: e.g., mass of inertia, mass etc.
+    - Use meshanything: to create interactable objects based on our requirement for simulator?
 
+Implementation:
+    1. Input: Give a scene image input and task desciption
+    2. output: 
