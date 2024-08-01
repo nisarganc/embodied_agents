@@ -1,7 +1,3 @@
-venv/*
-data/*
-logs/*
-ai2thor_data/*
+downloaded-data/*
 notes.txt
 habitat-lab/*
-habitat-challenge/*
