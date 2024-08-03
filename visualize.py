@@ -4,7 +4,11 @@ import warnings
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 warnings.filterwarnings('ignore')
 from habitat_sim.utils.settings import make_cfg
-from matplotlib import pyplot as plt
+
+
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
 from habitat_sim.utils import viz_utils as vut
 from omegaconf import DictConfig
 import numpy as np
@@ -16,6 +20,10 @@ from habitat.config.default import get_agent_config
 import habitat
 from habitat_sim.physics import JointMotorSettings, MotionType
 from omegaconf import OmegaConf
+
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
+import gzip
+import json
 
 def init_sim(data_path, agent_dict):
 
@@ -172,9 +180,6 @@ if __name__ == "__main__":
     # )
 
     ######################## INTERACTION ####################
-    from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
-    import gzip
-    import json
 
     # Define the agent configuration
     episode_file = os.path.join(data_path, "datasets/replica_cad/rearrange/v1/minival/rearrange_easy.json.gz")
@@ -188,16 +193,11 @@ if __name__ == "__main__":
     print(rearrange_episode)
 
     sim.reconfigure(sim.habitat_config, ep_info=rearrange_episode)
-    sim.reset()
-
-    art_agent.sim_obj.motion_type = MotionType.DYNAMIC
-    
 
     aom = sim.get_articulated_object_manager()
     rom = sim.get_rigid_object_manager()
 
     # We can query the articulated and rigid objects
-
     print("List of articulated objects:")
     for handle, ao in aom.get_objects_by_handle_substring().items():
         print(handle, "id", aom.get_object_id_by_handle(handle))
@@ -209,11 +209,13 @@ if __name__ == "__main__":
             print(handle, "id", ro.object_id)
             obj_ids.append(ro.object_id)   
 
+    #######################################
 
-    sim.reset()
-    art_agent.sim_obj.motion_type = MotionType.DYNAMIC
+    art_agent._fixed_base = True
+    art_agent.sim_obj.motion_type = MotionType.KINEMATIC
     obj_id = sim.scene_obj_ids[0]
     first_object = rom.get_object_by_id(obj_id)
+    sim.agents_mgr.on_new_scene()
 
     object_trans = first_object.translation
     print(first_object.handle, "is in", object_trans)
@@ -229,14 +231,14 @@ if __name__ == "__main__":
     sim.articulated_agent.base_rot = angle_sample_obj
     obs = sim.step({})
 
-    plt.imshow(obs["head_rgb"])
+    plt.imsave('output.png', obs['head_rgb'])
 
     # We use a grasp manager to interact with the object:
     agent_id = 0
     grasp_manager = sim.agents_mgr[agent_id].grasp_mgrs[0]
     grasp_manager.snap_to_obj(obj_id)
     obs = sim.step({})
-    plt.imshow(obs["head_rgb"])
+    plt.imsave('output2.png', obs['head_rgb'])
 
     num_iter = 100
     observations = []
@@ -253,8 +255,8 @@ if __name__ == "__main__":
         observations.append(sim.step({}))
     vut.make_video(
         observations,
-        "head_rgb",
+        "third_rgb",
         "color",
-        "Grasp_video",
+        "grasp_video",
         open_vid=True,
     )
