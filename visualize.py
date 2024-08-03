@@ -53,7 +53,7 @@ if __name__ == "__main__":
     import git, os
     repo = git.Repo(".", search_parent_directories=True)
     dir_path = repo.working_tree_dir
-    data_path = os.path.join(dir_path, "downloaded_data")
+    data_path = os.path.join(dir_path, "data")
     os.chdir(dir_path)
 
     # Define the agent configuration (URDF)
@@ -96,20 +96,20 @@ if __name__ == "__main__":
         sim.step_physics(1./60)
         observations.append(sim.get_sensor_observations())
 
-    vut.make_video(
-        observations,
-        "head_rgb",
-        "color",
-        "head_rgb_moveagent_video",
-        open_vid=False,
-    )
-    vut.make_video(
-        observations,
-        "third_rgb",
-        "color",
-        "third_rgb_moveagent_video",
-        open_vid=False,
-    ) 
+    # vut.make_video(
+    #     observations,
+    #     "head_rgb",
+    #     "color",
+    #     "head_rgb_moveagent_video",
+    #     open_vid=False,
+    # )
+    # vut.make_video(
+    #     observations,
+    #     "third_rgb",
+    #     "color",
+    #     "third_rgb_moveagent_video",
+    #     open_vid=False,
+    # ) 
 
     ############ ARM JOINT ACTIONs ############  
 
@@ -135,13 +135,13 @@ if __name__ == "__main__":
             print("Arm end effector translation:", art_agent.ee_transform().translation)
             print(art_agent.sim_obj.joint_positions)
 
-    vut.make_video(
-        observations,
-        "third_rgb",
-        "color",
-        "third_rgb_jointaction_video",
-        open_vid=False,
-    )
+    # vut.make_video(
+    #     observations,
+    #     "third_rgb",
+    #     "color",
+    #     "third_rgb_jointaction_video",
+    #     open_vid=False,
+    # )
 
     ####### DYNAMIC UPDATION ########
 
@@ -163,10 +163,98 @@ if __name__ == "__main__":
         sim.step_physics(dt)
         observations.append(sim.get_sensor_observations())
         
+    # vut.make_video(
+    #     observations,
+    #     "third_rgb",
+    #     "color",
+    #     "Dynamic_falling_video",
+    #     open_vid=False,
+    # )
+
+    ######################## INTERACTION ####################
+    from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
+    import gzip
+    import json
+
+    # Define the agent configuration
+    episode_file = os.path.join(data_path, "datasets/replica_cad/rearrange/v1/minival/rearrange_easy.json.gz")
+
+    with gzip.open(episode_file, "rt") as f: 
+        episode_files = json.loads(f.read())
+
+    # Get the first episode
+    episode = episode_files["episodes"][0]
+    rearrange_episode = RearrangeEpisode(**episode)
+    print(rearrange_episode)
+
+    sim.reconfigure(sim.habitat_config, ep_info=rearrange_episode)
+    sim.reset()
+
+    art_agent.sim_obj.motion_type = MotionType.DYNAMIC
+    
+
+    aom = sim.get_articulated_object_manager()
+    rom = sim.get_rigid_object_manager()
+
+    # We can query the articulated and rigid objects
+
+    print("List of articulated objects:")
+    for handle, ao in aom.get_objects_by_handle_substring().items():
+        print(handle, "id", aom.get_object_id_by_handle(handle))
+
+    print("\nList of rigid objects:")
+    obj_ids = []
+    for handle, ro in rom.get_objects_by_handle_substring().items():
+        if ro.awake:
+            print(handle, "id", ro.object_id)
+            obj_ids.append(ro.object_id)   
+
+
+    sim.reset()
+    art_agent.sim_obj.motion_type = MotionType.DYNAMIC
+    obj_id = sim.scene_obj_ids[0]
+    first_object = rom.get_object_by_id(obj_id)
+
+    object_trans = first_object.translation
+    print(first_object.handle, "is in", object_trans)
+
+    sample = sim.pathfinder.get_random_navigable_point_near(
+        circle_center=object_trans, radius=1.0, island_index=-1
+    )
+    vec_sample_obj = object_trans - sample
+
+    angle_sample_obj = np.arctan2(-vec_sample_obj[2], vec_sample_obj[0])
+
+    sim.articulated_agent.base_pos = sample
+    sim.articulated_agent.base_rot = angle_sample_obj
+    obs = sim.step({})
+
+    plt.imshow(obs["head_rgb"])
+
+    # We use a grasp manager to interact with the object:
+    agent_id = 0
+    grasp_manager = sim.agents_mgr[agent_id].grasp_mgrs[0]
+    grasp_manager.snap_to_obj(obj_id)
+    obs = sim.step({})
+    plt.imshow(obs["head_rgb"])
+
+    num_iter = 100
+    observations = []
+
+    sim.articulated_agent.base_pos = sample
+    for _ in range(num_iter):    
+        forward_vec = art_agent.base_transformation.transform_vector(mn.Vector3(1,0,0))
+        art_agent.base_pos = art_agent.base_pos + forward_vec * 0.02
+        observations.append(sim.step({}))
+        
+    # Remove the object
+    grasp_manager.desnap()
+    for _ in range(20):
+        observations.append(sim.step({}))
     vut.make_video(
         observations,
-        "third_rgb",
+        "head_rgb",
         "color",
-        "Dynamic_falling_video",
-        open_vid=False,
+        "Grasp_video",
+        open_vid=True,
     )
