@@ -108,14 +108,14 @@ if __name__ == "__main__":
     #     observations,
     #     "head_rgb",
     #     "color",
-    #     "head_rgb_moveagent_video",
+    #     "results/head_rgb_moveagent_video",
     #     open_vid=False,
     # )
     # vut.make_video(
     #     observations,
     #     "third_rgb",
     #     "color",
-    #     "third_rgb_moveagent_video",
+    #     "results/third_rgb_moveagent_video",
     #     open_vid=False,
     # ) 
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
     sim.reset()
     observations = []
-    # print("Arm joint limits:", art_agent.arm_joint_limits)
+    print("Arm joint limits:", art_agent.arm_joint_limits)
 
     lower_limit = art_agent.arm_joint_limits[0].copy()
     lower_limit[lower_limit == -np.inf] = 0
@@ -147,13 +147,14 @@ if __name__ == "__main__":
     #     observations,
     #     "third_rgb",
     #     "color",
-    #     "third_rgb_jointaction_video",
+    #     "results/third_rgb_jointaction_video",
     #     open_vid=False,
     # )
 
     ####### DYNAMIC UPDATION ########
 
     # We will initialize the agent 0.3 meters away from the floor and let it fall
+    sim.reset()
     art_agent._fixed_base = False
     sim.agents_mgr.on_new_scene()
 
@@ -175,24 +176,27 @@ if __name__ == "__main__":
     #     observations,
     #     "third_rgb",
     #     "color",
-    #     "Dynamic_falling_video",
+    #     "results/Dynamic_falling_video",
     #     open_vid=False,
     # )
 
-    ######################## INTERACTION ####################
+    ######################## OBJECTS IN SCENE ####################
 
-    # Define the agent configuration
+    # Load the dataset
     episode_file = os.path.join(data_path, "datasets/replica_cad/rearrange/v1/minival/rearrange_easy.json.gz")
-
     with gzip.open(episode_file, "rt") as f: 
         episode_files = json.loads(f.read())
 
     # Get the first episode
     episode = episode_files["episodes"][0]
     rearrange_episode = RearrangeEpisode(**episode)
-    print(rearrange_episode)
+
+    art_agent = sim.articulated_agent
+    art_agent._fixed_base = True
+    sim.agents_mgr.on_new_scene()
 
     sim.reconfigure(sim.habitat_config, ep_info=rearrange_episode)
+    sim.reset()    
 
     aom = sim.get_articulated_object_manager()
     rom = sim.get_rigid_object_manager()
@@ -200,53 +204,62 @@ if __name__ == "__main__":
     # We can query the articulated and rigid objects
     print("List of articulated objects:")
     for handle, ao in aom.get_objects_by_handle_substring().items():
-        print(handle, "id", aom.get_object_id_by_handle(handle))
+        print(handle, ", id:", aom.get_object_id_by_handle(handle))
 
     print("\nList of rigid objects:")
     obj_ids = []
     for handle, ro in rom.get_objects_by_handle_substring().items():
         if ro.awake:
-            print(handle, "id", ro.object_id)
-            obj_ids.append(ro.object_id)   
+            print(handle, ",id:", ro.object_id)
+            obj_ids.append(ro.object_id)                
 
-    #######################################
+    ########################### TELEPORTATION AND GRASPING ######################
 
+    sim.reset()
     art_agent._fixed_base = True
     art_agent.sim_obj.motion_type = MotionType.KINEMATIC
-    obj_id = sim.scene_obj_ids[0]
+
+    # 002_master_chef_can_:0000 ,id: 82
+    obj_id = int(82)
     first_object = rom.get_object_by_id(obj_id)
     sim.agents_mgr.on_new_scene()
+    print("Agent's position", sim.articulated_agent.base_pos)
+
 
     object_trans = first_object.translation
-    print(first_object.handle, "is in", object_trans)
+    print("Object's position", first_object.handle, "is in", object_trans)
 
     sample = sim.pathfinder.get_random_navigable_point_near(
         circle_center=object_trans, radius=1.0, island_index=-1
     )
-    vec_sample_obj = object_trans - sample
+    print("Sampled position:", sample)
 
+    vec_sample_obj = object_trans - sample
     angle_sample_obj = np.arctan2(-vec_sample_obj[2], vec_sample_obj[0])
+    print("Angle between object and sample:", angle_sample_obj)
 
     sim.articulated_agent.base_pos = sample
     sim.articulated_agent.base_rot = angle_sample_obj
     obs = sim.step({})
 
-    plt.imsave('output.png', obs['head_rgb'])
+    plt.imsave('results/output.png', obs['third_rgb'])
 
-    # We use a grasp manager to interact with the object:
+    # grasp manager to interact with the object:
     agent_id = 0
     grasp_manager = sim.agents_mgr[agent_id].grasp_mgrs[0]
     grasp_manager.snap_to_obj(obj_id)
     obs = sim.step({})
-    plt.imsave('output2.png', obs['head_rgb'])
+    plt.imsave('results/output2.png', obs['third_rgb'])
 
-    num_iter = 100
+
+    ########################### DROP OBJECT ######################
+    num_iter = 10
     observations = []
-
-    sim.articulated_agent.base_pos = sample
+    #sim.articulated_agent.base_pos = sample
     for _ in range(num_iter):    
         forward_vec = art_agent.base_transformation.transform_vector(mn.Vector3(1,0,0))
         art_agent.base_pos = art_agent.base_pos + forward_vec * 0.02
+        art_agent.base_rot = np.pi / (1 * num_iter)
         observations.append(sim.step({}))
         
     # Remove the object
@@ -257,6 +270,6 @@ if __name__ == "__main__":
         observations,
         "third_rgb",
         "color",
-        "grasp_video",
-        open_vid=True,
+        "results/drop_video",
+        open_vid=False,
     )
